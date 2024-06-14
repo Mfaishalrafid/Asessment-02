@@ -35,4 +35,18 @@
     <string name="bagikan">Bagikan</string>
     <string name="bagikan_template" translatable="false">Nama Minuman: %1\$s Harga Minuman: %2\$s Jenis Minuman: %3\$s </string>
     <string name="bagikan_data" translatable="false">Nama Minuman: %1\$s Jenis Minuman: %2\$s</string>
+    <string name="gambar">Gambar %1$s</string>
+    <string name="error">Gagal memuat data... Koneksi error.</string>
+    <string name="try_again">Coba lagi</string>
+    <string name="profil">Profil</string>
+    <string name="tutup">Tutup</string>
+    <string name="logout">Logout</string>
+    <string name="tambah_hewan">Tambah Hewan</string>
+
+    <string name="nama_latin">Nama latin</string>
+    <string name="batal">Batal</string>
+
+    <string name="delete">Hapus</string>
+    <string name="confirm_delete">Konfirmasi Hapus</string>
+    <string name="cancel">Batal</string>
 </resources>
