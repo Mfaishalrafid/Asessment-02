@@ -41,10 +41,11 @@
     <string name="profil">Profil</string>
     <string name="tutup">Tutup</string>
     <string name="logout">Logout</string>
-    <string name="tambah_hewan">Tambah Hewan</string>
+    <string name="tambah_minuman">Tambah Minuman</string>
 
     <string name="nama_latin">Nama latin</string>
     <string name="batal">Batal</string>
+    <string name="jenis">Jenis</string>
 
     <string name="delete">Hapus</string>
     <string name="confirm_delete">Konfirmasi Hapus</string>

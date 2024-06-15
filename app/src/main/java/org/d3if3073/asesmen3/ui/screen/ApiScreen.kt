@@ -1,6 +1,9 @@
+package org.d3if3073.asesmen3.ui.screen
+
+
+
 import android.content.ContentResolver
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.os.Build
@@ -8,7 +11,7 @@ import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -16,15 +19,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -54,7 +66,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -66,7 +78,9 @@ import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import coil.compose.rememberImagePainter
 import coil.request.ImageRequest
 import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
@@ -75,20 +89,49 @@ import com.canhub.cropper.CropImageView
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-import com.google.firebase.firestore.auth.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.d3if3073.asesmen3.BuildConfig
 import org.d3if3073.asesmen3.R
-import org.d3if3073.asesmen3.model.Minuman
-import org.d3if3073.asesmen3.network.MinumanApi
-import org.d3if3073.asesmen3.ui.screen.MainViewModel
-import org.d3if3073.asesmen3.ui.theme.Asesmen2Theme
+import org.d3if3073.asesmen3.model.Minuman2
+import org.d3if3073.asesmen3.navigation.Screen
+import org.d3if3073.asesmen3.network.HausApi
+import org.d3if3073.asesmen3.network.User
+import org.d3if3073.asesmen3.network.UserDataStore
 
-@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+
+@Composable
+fun ProfileImage(
+    imageUrl: String?,
+    modifier: Modifier = Modifier,
+    contentDescription: String?,
+    defaultImageRes: Int,
+    imageSize: Dp = 48.dp
+) {
+    val painter = rememberImagePainter(
+        data = imageUrl,
+        builder = {
+            crossfade(true)
+            placeholder(defaultImageRes)
+        }
+    )
+
+    Box(
+        modifier = modifier
+            .size(imageSize)
+            .clip(shape = CircleShape)
+    ) {
+        Image(
+            painter = painter,
+            contentDescription = contentDescription,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun ApiScreen(navController: NavHostController) {
     val context = LocalContext.current
     val dataStore = UserDataStore(context)
     val user by dataStore.userFlow.collectAsState(User())
@@ -97,15 +140,17 @@ fun MainScreen() {
     val errorMessage by viewModel.errorMessage
 
     var showDialog by remember { mutableStateOf(false) }
-    var showHewanDialog by remember { mutableStateOf(false) }
+    var showMinuman2Dialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var currentHewanId by remember { mutableStateOf("") }
+    var currentMinuman2Id by remember { mutableStateOf("") }
 
     var bitmap: Bitmap? by remember { mutableStateOf(null) }
     val launcher = rememberLauncherForActivityResult(CropImageContract()) {
         bitmap = getCroppedImage(context.contentResolver, it)
-        if (bitmap != null) showHewanDialog = true
+        if (bitmap != null) showMinuman2Dialog = true
     }
+
+    var showList by remember { mutableStateOf(true) }
 
     Scaffold(
         topBar = {
@@ -118,50 +163,97 @@ fun MainScreen() {
                     titleContentColor = MaterialTheme.colorScheme.primary,
                 ),
                 actions = {
-                    IconButton(onClick = {
-                        if (user.email.isEmpty()) {
-                            CoroutineScope(Dispatchers.IO).launch { signIn(context, dataStore) }
-                        }
-                        else {
-                            showDialog = true
-                        }
-                    } ) {
+                    IconButton(onClick = { navController.navigate(Screen.Data.route) }) {
                         Icon(
-                            painterResource(R.drawable.baseline_account_circle_24),
-                            contentDescription = stringResource(R.string.profil),
+                            imageVector = Icons.Outlined.ShoppingCart,
+                            contentDescription = stringResource(R.string.tentang_aplikasi),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
+                    IconButton(onClick = {
+                        showList = !showList
+                    }) {
+                        Icon(
+                            painter = painterResource(
+                                if (showList) R.drawable.baseline_grid_view_24
+                                else R.drawable.baseline_view_list_24
+                            ),
+                            contentDescription = stringResource(
+                                if (showList) R.string.grid
+                                else R.string.list
+                            ),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(onClick = {
+                        if (user.email.isEmpty()) {
+                            CoroutineScope(Dispatchers.IO).launch { signIn(context, dataStore) }
+                        } else {
+                            showDialog = true
+                        }
+                    }) {
+                        if (!user.photoUrl.isNullOrEmpty()) {
+                            ProfileImage(
+                                imageUrl = user.photoUrl,
+                                contentDescription = stringResource(R.string.profil),
+                                defaultImageRes = R.drawable.baseline_account_circle_24,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(R.drawable.baseline_account_circle_24),
+                                contentDescription = stringResource(R.string.profil),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    IconButton(onClick = { navController.navigate(Screen.About.route) }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = stringResource(R.string.tentang_aplikasi),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                val options = CropImageContractOptions(
-                    null, CropImageOptions(
-                        imageSourceIncludeGallery = false,
-                        imageSourceIncludeCamera = true,
-                        fixAspectRatio = true
-                    )
-                )
-                launcher.launch(options)
-            }) {
-                Icon(imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(id = R.string.tambah_hewan)
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (user.email.isNotEmpty()) {
+                    FloatingActionButton(onClick = {
+                        val options = CropImageContractOptions(
+                            null, CropImageOptions(
+                                imageSourceIncludeGallery = false,
+                                imageSourceIncludeCamera = true,
+                                fixAspectRatio = true
+                            )
+                        )
+                        launcher.launch(options)
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(id = R.string.tambah_minuman)
+                        )
+                    }
+                }
             }
         }
     ) { padding ->
         ScreenContent(
+            showList = showList,  // Ubah di sini
             viewModel = viewModel,
-            user.email,
-            Modifier.padding(padding),
+            userId = user.email,
+            modifier = Modifier.padding(padding),
             onDeleteRequest = { id ->
                 showDeleteDialog = true
-                currentHewanId = id
-                Log.d("MainScreen", "Current Hewan ID: $currentHewanId")
+                currentMinuman2Id = id
+                Log.d("MainScreen", "Current Minuman2 ID: $currentMinuman2Id")
             },
-            isUserLogggedInt = user.email.isNotEmpty()
+            isUserLoggedIn = user.email.isNotEmpty()
         )
 
         if (showDialog) {
@@ -172,24 +264,26 @@ fun MainScreen() {
                 showDialog = false
             }
         }
-        if (showHewanDialog){
-            HewanDialog(
+        if (showMinuman2Dialog){
+            MinumanDialog(
                 bitmap = bitmap,
-                onDismissRequest = { showHewanDialog = false}) {nama, namaLatin ->
-                viewModel.saveData(user.email, nama, namaLatin, bitmap!!)
-                showDialog = false
+                onDismissRequest = { showMinuman2Dialog = false }) { nama, harga, jenis, bitmap ->
+                viewModel.saveData(user.email, nama, harga, jenis, bitmap)
+                showMinuman2Dialog = false
             }
         }
+
         if (errorMessage != null) {
-            Toast.makeText(context,errorMessage, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
             viewModel.clearMessage()
         }
+
         if (showDeleteDialog) {
             DeleteConfirmationDialog(
                 onDismissRequest = { showDeleteDialog = false },
                 onConfirm = {
-                    Log.d("MainScreen", "Deleting Hewan ID: $currentHewanId")
-                    viewModel.deleteData(user.email, currentHewanId)
+                    Log.d("MainScreen", "Deleting Rental ID: $currentMinuman2Id")
+                    viewModel.deleteData(user.email, currentMinuman2Id)
                     showDeleteDialog = false
                 }
             )
@@ -199,11 +293,12 @@ fun MainScreen() {
 
 @Composable
 fun ScreenContent(
+    showList: Boolean,
     viewModel: MainViewModel,
     userId: String,
     modifier: Modifier,
     onDeleteRequest: (String) -> Unit,
-    isUserLogggedInt: Boolean
+    isUserLoggedIn: Boolean
 ) {
     val data by viewModel.data
     val status by viewModel.status.collectAsState()
@@ -213,32 +308,54 @@ fun ScreenContent(
     }
 
     when (status) {
-        MinumanApi.ApiStatus.LOADING -> {
+        HausApi.ApiStatus.LOADING -> {
             Box(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
             }
         }
-        MinumanApi.ApiStatus.SUCCES -> {
-            LazyVerticalGrid(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(4.dp),
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(data) {
-                    ListItem(hewan = it,
-                        onDeleteRequest = onDeleteRequest,
-                        isUserLoggedIn = isUserLogggedInt
-                    )
+
+        HausApi.ApiStatus.SUCCESS -> {
+            if (showList) {
+                LazyVerticalGrid(
+                    modifier = modifier
+                        .fillMaxSize()
+                        .padding(4.dp),
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    items(data.filter { it.auth.isEmpty() || it.auth == userId }) { minuman2 ->
+                        ListItem(
+                            minuman2 = minuman2,
+                            onDeleteRequest = onDeleteRequest,
+                            isUserLoggedIn = isUserLoggedIn,
+                            currentUserId = userId
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = modifier
+                        .fillMaxSize()
+                        .padding(4.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    items(data.filter { it.auth.isEmpty() || it.auth == userId }) { minuman2 ->
+                        ListItem(
+                            minuman2 = minuman2,
+                            onDeleteRequest = onDeleteRequest,
+                            isUserLoggedIn = isUserLoggedIn,
+                            currentUserId = userId
+                        )
+                    }
                 }
             }
         }
-        HewanApi.ApiStatus.FAILED-> {
-            Column (
+
+        HausApi.ApiStatus.FAILED -> {
+            Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -256,75 +373,90 @@ fun ScreenContent(
     }
 }
 
+
+
 @Composable
 fun ListItem(
-    hewan: Hewan,
+    minuman2: Minuman2,
     onDeleteRequest: (String) -> Unit,
-    isUserLoggedIn: Boolean
+    isUserLoggedIn: Boolean,
+    currentUserId: String
 ) {
-    Box(
-        modifier = Modifier
-            .padding(4.dp)
-            .border(1.dp, Color.Gray),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(HewanApi.getHewanUrl(hewan.imageId))
-                .crossfade(true)
-                .build(),
-            contentDescription = stringResource(R.string.gambar, hewan.nama),
-            contentScale = ContentScale.Crop,
-            placeholder = painterResource(id = R.drawable.loading_img),
-            error = painterResource(id = R.drawable.baseline_broken_image_24),
+    if (minuman2.auth.isEmpty() || minuman2.auth == currentUserId) {
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
                 .padding(4.dp)
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp)
-                .background(Color(red = 0f, green = 0f, blue = 0f, alpha = 0.5f))
-                .padding(4.dp)
+                .border(1.dp, Color.Gray),
+            contentAlignment = Alignment.BottomCenter
         ) {
-            Text(
-                text = hewan.nama,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            Text(
-                text = hewan.namaLatin,
-                fontStyle = FontStyle.Italic,
-                fontSize = 14.sp,
-                color = Color.White
-            )
-        }
-        if (isUserLoggedIn && hewan.mine == 1) {
-            IconButton(
-                onClick = {
-                    if (hewan.id.isNotEmpty()) {
-                        onDeleteRequest(hewan.id)
-                    } else {
-                        Log.d("ListItem", "Invalid hewan ID")
-                    }
-                },
-                modifier = Modifier.align(Alignment.TopEnd)
+            Box(
+                modifier = Modifier
+                    .aspectRatio(1f)
+                    .border(1.dp, Color.Gray)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Delete,
-                    contentDescription = stringResource(R.string.delete),
-                    tint = Color.White
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(HausApi.getHausUrl(minuman2.image))
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = stringResource(R.string.gambar, minuman2.nama, minuman2.harga),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(id = R.drawable.loading_img),
+                    error = painterResource(id = R.drawable.baseline_broken_image_24),
+                    modifier = Modifier.fillMaxSize()
                 )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(4.dp)
+                    .background(Color(red = 0f, green = 0f, blue = 0f, alpha = 0.5f))
+                    .padding(4.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = minuman2.nama,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = minuman2.harga,
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 14.sp,
+                        color = Color.White
+                    )
+                    Text(
+                        text = minuman2.jenis,
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 14.sp,
+                        color = Color.White
+                    )
+                }
+                if (isUserLoggedIn && minuman2.auth == currentUserId) {
+                    IconButton(
+                        onClick = {
+                    if (minuman2.id.isNotEmpty()) {
+                        onDeleteRequest(minuman2.id.toString())
+                    } else {
+                        Log.d("ListItem", "Invalid minuman2 ID")
+                    }
+                        },
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = stringResource(R.string.delete),
+                            tint = Color.White
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 
-
-
-@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 private suspend fun signIn(context: Context, dataStore: UserDataStore) {
     val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
         .setFilterByAuthorizedAccounts(false)
@@ -344,24 +476,22 @@ private suspend fun signIn(context: Context, dataStore: UserDataStore) {
     }
 }
 
-private suspend fun handleSignIn(
-    result: GetCredentialResponse,
-    dataStore: UserDataStore) {
+private suspend fun handleSignIn(result: GetCredentialResponse, dataStore: UserDataStore) {
     val credential = result.credential
     if (credential is CustomCredential &&
         credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
         try {
-            val googleId = GoogleIdTokenCredential.createFrom(credential.data)
-            val name = googleId.displayName ?: ""
-            val email = googleId.id
-            val photoUrl = googleId.profilePictureUri.toString()
-            dataStore.saveData(User(name, email, photoUrl))
+            val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data)
+            val nama = googleIdToken.displayName ?: ""
+            val email = googleIdToken.id
+            val photoUrl = googleIdToken.profilePictureUri.toString()
+            dataStore.saveData(User(nama, email, photoUrl))
         } catch (e: GoogleIdTokenParsingException) {
             Log.e("SIGN-IN", "Error: ${e.message}")
         }
     }
     else {
-        Log.e("SIGN-IN", "Error: unrecegonized custom credential type.")
+        Log.e("SIGN-IN", "Error: unrecognized custom credential type.")
     }
 }
 
@@ -381,11 +511,10 @@ private fun getCroppedImage(
     resolver: ContentResolver,
     result: CropImageView.CropResult
 ): Bitmap? {
-    if (!result.isSuccessful){
+    if (!result.isSuccessful) {
         Log.e("IMAGE", "Error: ${result.error}")
         return null
     }
-
     val uri = result.uriContent ?: return null
 
     return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
@@ -418,7 +547,7 @@ fun DeleteConfirmationDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit
                         onClick = { onDismissRequest() },
                         modifier = Modifier.padding(8.dp)
                     ) {
-                        Text(text = stringResource(R.string.cancel))
+                        Text(text = stringResource(R.string.batal))
                     }
                     OutlinedButton(
                         onClick = { onConfirm() },
@@ -432,12 +561,3 @@ fun DeleteConfirmationDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-@Preview(showBackground = true)
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
-@Composable
-fun ScreenPreview() {
-    Asesmen2Theme {
-        MainScreen()
-    }
-}

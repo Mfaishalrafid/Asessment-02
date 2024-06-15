@@ -7,8 +7,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
-import org.d3if3073.asesmen3.network.ApiStatus
-import org.d3if3073.asesmen3.network.MinumanApi
+import org.d3if3073.asesmen3.network.HausApi
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
@@ -21,7 +20,7 @@ class MainViewModel : ViewModel() {
     var data = mutableStateOf(emptyList<Minuman2>())
         private set
 
-    var status = MutableStateFlow(ApiStatus.LOADING)
+    var status = MutableStateFlow(HausApi.ApiStatus.LOADING)
         private set
 
     var errorMessage = mutableStateOf<String?>(null)
@@ -29,13 +28,13 @@ class MainViewModel : ViewModel() {
 
     fun retrieveData(userId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            status.value = ApiStatus.LOADING
+            status.value = HausApi.ApiStatus.LOADING
             try {
-                data.value = MinumanApi.service.getMinuman(userId)
-                status.value = ApiStatus.SUCCESS
+                data.value = HausApi.service.getHaus(userId)
+                status.value = HausApi.ApiStatus.SUCCESS
             } catch (e: Exception) {
                 Log.d("MainViewModel", "Failure: ${e.message}")
-                status.value = ApiStatus.FAILED
+                status.value = HausApi.ApiStatus.FAILED
             }
         }
     }
@@ -43,7 +42,7 @@ class MainViewModel : ViewModel() {
     fun saveData(userId: String, nama: String, harga: String, jenis: String, bitmap: Bitmap) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = MinumanApi.service.postMinuman(
+                val result = HausApi.service.postHaus(
                     userId,
                     nama.toRequestBody("text/plain".toMediaTypeOrNull()),
                     harga.toRequestBody("text/plain".toMediaTypeOrNull()),
@@ -66,7 +65,7 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 Log.d("MainViewModel", "Attempting to delete voting with ID: $minumanId using user ID: $userId")
-                val result = MinumanApi.service.deleteMinuman(userId, minumanId)
+                val result = HausApi.service.deleteHaus(userId, minumanId)
                 Log.d("MainViewModel", "API Response: status=${result.status}, message=${result.message}")
                 if (result.status == "success") {
                     retrieveData(userId)

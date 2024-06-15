@@ -13,6 +13,8 @@ val Context.dataStore : DataStore<Preferences> by preferencesDataStore(
     name = "settings_preference"
 )
 
+
+
 class SettingsDataStore(private val context: Context) {
 
     companion object {
@@ -22,6 +24,8 @@ class SettingsDataStore(private val context: Context) {
     val layoutFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[IS_LIST] ?: true
     }
+
+
 
     suspend fun saveLayout(isList: Boolean) {
         context.dataStore.edit { preferences ->

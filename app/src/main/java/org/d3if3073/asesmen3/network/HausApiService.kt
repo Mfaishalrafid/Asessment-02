@@ -27,15 +27,15 @@ private val retrofit = Retrofit.Builder()
     .baseUrl(BASE_URL)
     .build()
 
-interface MinumanApiService {
+interface HausApiService {
     @GET("json.php")
-    suspend fun getMinuman(
+    suspend fun getHaus(
         @Query("auth") userId: String
     ): List<Minuman2>
 
     @Multipart
     @POST("json.php")
-    suspend fun postMinuman(
+    suspend fun postHaus(
         @Part("auth") userId: String,
         @Part("nama") nama: RequestBody,
         @Part("harga") harga: RequestBody,
@@ -44,19 +44,18 @@ interface MinumanApiService {
     ): OpStatus
 
     @DELETE("json.php")
-    suspend fun deleteMinuman(
+    suspend fun deleteHaus(
         @Query("auth") userId: String,
         @Query("id") id: String
     ): OpStatus
 }
 
-object MinumanApi {
-    val service: MinumanApiService by lazy {
-        retrofit.create(MinumanApiService::class.java)
+object HausApi {
+    val service: HausApiService by lazy {
+        retrofit.create(HausApiService::class.java)
     }
-    fun getMinumanUrl(gambar: String): String {
+    fun getHausUrl(gambar: String): String {
         return "$BASE_URL$gambar"
     }
+    enum class ApiStatus { LOADING, SUCCESS, FAILED }
 }
-
-enum class ApiStatus { LOADING, SUCCESS, FAILED }
